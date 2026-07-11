@@ -62,8 +62,28 @@
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 1.5px;
+    }
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 16px;
     }
+    .btn-dice {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, border-color 0.15s;
+      line-height: 1;
+    }
+    .btn-dice:active { transform: rotate(180deg) scale(0.9); border-color: var(--gold); }
 
     .section-label {
       font-size: 0.85rem;
@@ -195,11 +215,13 @@
       margin-bottom: 12px;
     }
     .player-row:last-child { margin-bottom: 0; }
-    .player-dot {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
+    .dir-label {
+      font-size: 1.8rem;
+      font-weight: 900;
       flex-shrink: 0;
+      width: 32px;
+      text-align: center;
+      line-height: 1;
     }
     .player-row input {
       flex: 1;
@@ -597,21 +619,24 @@
   </div>
 
   <div class="card">
-    <div class="card-title">玩家姓名</div>
+    <div class="card-title-row">
+      <span class="card-title">小名</span>
+      <button class="btn-dice" onclick="shuffleNames()" title="隨機分配座位">&#9856;</button>
+    </div>
     <div class="player-row">
-      <div class="player-dot" style="background:#e8a020"></div>
+      <span class="dir-label" style="color:#e8a020">東</span>
       <input type="text" id="p0" placeholder="東方玩家" maxlength="6">
     </div>
     <div class="player-row">
-      <div class="player-dot" style="background:#2d8a4e"></div>
+      <span class="dir-label" style="color:#2d8a4e">南</span>
       <input type="text" id="p1" placeholder="南方玩家" maxlength="6">
     </div>
     <div class="player-row">
-      <div class="player-dot" style="background:#2060c8"></div>
+      <span class="dir-label" style="color:#2060c8">西</span>
       <input type="text" id="p2" placeholder="西方玩家" maxlength="6">
     </div>
     <div class="player-row">
-      <div class="player-dot" style="background:#c41e3a"></div>
+      <span class="dir-label" style="color:#c41e3a">北</span>
       <input type="text" id="p3" placeholder="北方玩家" maxlength="6">
     </div>
   </div>
@@ -761,6 +786,17 @@ function showHistory()    { show('v-history');    renderHistory(); }
 function showSettlement() { show('v-settlement'); renderSettlement(); }
 
 // ===== SETUP =====
+function shuffleNames() {
+  const ids = ['p0','p1','p2','p3'];
+  const vals = ids.map(id => document.getElementById(id).value);
+  // Fisher-Yates shuffle
+  for (let i = vals.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [vals[i], vals[j]] = [vals[j], vals[i]];
+  }
+  ids.forEach((id, i) => document.getElementById(id).value = vals[i]);
+}
+
 function startGame() {
   const names = [0,1,2,3].map(i => {
     const v = document.getElementById('p'+i).value.trim();
