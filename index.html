@@ -192,6 +192,25 @@
     }
 
     /* ===== SETUP ===== */
+    .money-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .money-inline input {
+      width: 90px;
+      font-size: 1.1rem;
+      padding: 8px 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      text-align: center;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+    .money-inline input:focus { border-color: var(--gold); }
+
     .setup-header {
       text-align: center;
       padding: clamp(20px, 6vw, 36px) 0 clamp(16px, 4vw, 28px);
@@ -615,7 +634,7 @@
 <div class="view active" id="v-setup">
   <div class="setup-header">
     <h1>麻將計分</h1>
-    <p>每人起始 100 點</p>
+    <p>設定玩家與金額後開始</p>
   </div>
 
   <div class="card">
@@ -642,22 +661,20 @@
   </div>
 
   <div class="card">
-    <div class="card-title">計分設定</div>
+    <div class="card-title">金額設定</div>
     <div class="settings-row">
-      <label>起始點數</label>
-      <input type="number" id="s-start" value="100" min="10" max="9999" step="10" inputmode="numeric">
+      <label>底台</label>
+      <div class="money-inline">
+        <input type="number" id="s-base" value="50" min="0" max="9999" step="10" inputmode="numeric">
+        <span class="settings-hint">元</span>
+      </div>
     </div>
     <div class="settings-row">
-      <label>底台 <span class="settings-hint">(每局固定加)</span></label>
-      <input type="number" id="s-base" value="0" min="0" max="99" inputmode="numeric">
-    </div>
-    <div class="settings-row">
-      <label>每台點數</label>
-      <input type="number" id="s-tai" value="1" min="1" max="999" inputmode="numeric">
-    </div>
-    <div class="settings-row">
-      <label>每點金額 <span class="settings-hint">(0=不換算)</span></label>
-      <input type="number" id="s-money" value="0" min="0" max="9999" inputmode="numeric">
+      <label>每台</label>
+      <div class="money-inline">
+        <input type="number" id="s-tai" value="20" min="1" max="9999" step="10" inputmode="numeric">
+        <span class="settings-hint">元</span>
+      </div>
     </div>
   </div>
 
@@ -742,7 +759,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">各玩家點數</div>
+    <div class="card-title">各玩家盈虧</div>
     <div id="sett-scores"></div>
   </div>
 
@@ -769,7 +786,7 @@ const DIRS = ['東','南','西','北'];
 let G = {
   players: [],       // [{name, score}]
   rounds: [],        // [{roundNum,winner,tai,method,shooter,changes,time,banker}]
-  cfg: { start:100, baseTai:0, perTai:1, moneyPerPt:0 },
+  cfg: { baseMoney:50, perTaiMoney:20 },
   modal: { winner:null, tai:1, method:null, shooter:null },
   banker: 0,         // 目前莊家 index
   bankerStreak: 0    // 連莊次數（0 = 第一莊）
@@ -802,11 +819,9 @@ function startGame() {
     const v = document.getElementById('p'+i).value.trim();
     return v || DEFAULTS[i];
   });
-  G.cfg.start    = Math.max(10, parseInt(document.getElementById('s-start').value) || 100);
-  G.cfg.baseTai  = Math.max(0,  parseInt(document.getElementById('s-base').value)  || 0);
-  G.cfg.perTai   = Math.max(1,  parseInt(document.getElementById('s-tai').value)   || 1);
-  G.cfg.moneyPerPt = Math.max(0, parseInt(document.getElementById('s-money').value) || 0);
-  G.players = names.map(name => ({ name, score: G.cfg.start }));
+  G.cfg.baseMoney   = Math.max(0, parseInt(document.getElementById('s-base').value) || 0);
+  G.cfg.perTaiMoney = Math.max(1, parseInt(document.getElementById('s-tai').value)  || 1);
+  G.players = names.map(name => ({ name, score: 0 }));
   G.rounds  = [];
   G.banker  = 0;
   G.bankerStreak = 0;
@@ -821,13 +836,12 @@ function colorDot(i) {
 function renderGame() {
   document.getElementById('round-pill').textContent = `第 ${G.rounds.length} 局`;
   document.getElementById('scoreboard').innerHTML = G.players.map((p,i) => {
-    const net = p.score - G.cfg.start;
-    const netCls = net>0?'net-pos':net<0?'net-neg':'net-zero';
-    const netStr = net>0?`+${net}`:net<0?`${net}`:'±0';
     const isBanker = i === G.banker;
     const bankerLabel = isBanker
       ? (G.bankerStreak > 0 ? `莊×${G.bankerStreak+1}` : '莊')
       : '';
+    const valCls = p.score>0?'net-pos':p.score<0?'net-neg':'net-zero';
+    const valStr = p.score>0?`+${p.score}`:p.score<0?`${p.score}`:'0';
     return `
       <div class="score-card">
         <div class="score-card-header">
@@ -835,8 +849,8 @@ function renderGame() {
           ${isBanker ? `<span class="banker-badge">${bankerLabel}</span>` : '<span></span>'}
         </div>
         <div class="score-card-name">${colorDot(i)}${p.name}</div>
-        <div class="score-card-value">${p.score}</div>
-        <div class="score-card-net ${netCls}">${netStr} 點</div>
+        <div class="score-card-value ${valCls}">${valStr}</div>
+        <div class="score-card-net">元</div>
       </div>`;
   }).join('');
 }
@@ -898,12 +912,11 @@ function pickShooter(i) { G.modal.shooter=i; renderModal(); }
 function changeTai(d)   { G.modal.tai=Math.max(1,Math.min(20,G.modal.tai+d)); renderModal(); }
 
 function calcChanges(m) {
-  const totalTai = m.tai + G.cfg.baseTai;
-  const pts = totalTai * G.cfg.perTai;
+  const payment = G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney;
   return G.players.map((_,i) => {
-    if (i === m.winner) return m.method==='zimo' ? pts*3 : pts;
-    if (m.method === 'zimo') return -pts;
-    if (i === m.shooter)    return -pts;
+    if (i === m.winner) return m.method==='zimo' ? payment*3 : payment;
+    if (m.method === 'zimo') return -payment;
+    if (i === m.shooter)    return -payment;
     return 0;
   });
 }
@@ -919,19 +932,17 @@ function renderPreview() {
     return;
   }
   const chg = calcChanges(m);
-  const totalTai = m.tai + G.cfg.baseTai;
-  const taiNote = G.cfg.baseTai > 0
-    ? `底台${G.cfg.baseTai} + ${m.tai}台 = ${totalTai}台`
-    : `${m.tai} 台`;
+  const payment = G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney;
+  const payNote = `底台 ${G.cfg.baseMoney} + ${m.tai}台×${G.cfg.perTaiMoney} = ${payment} 元/份`;
   document.getElementById('preview').innerHTML =
-    `<div class="preview-title" style="margin-bottom:8px">${taiNote} · ${totalTai * G.cfg.perTai} 點/份</div>` +
+    `<div class="preview-title" style="margin-bottom:8px">${payNote}</div>` +
     G.players.map((p,i) => {
       const c = chg[i];
       const cls = c>0?'chg-gain':c<0?'chg-lose':'chg-none';
-      const str = c>0?`+${c}`:c===0?'不變':`${c}`;
+      const str = c>0?`+$${c}`:c===0?'不變':`-$${Math.abs(c)}`;
       return `<div class="preview-row">
         <span class="preview-name">${colorDot(i)}${p.name}</span>
-        <span class="preview-chg ${cls}">${str} 點</span>
+        <span class="preview-chg ${cls}">${str}</span>
       </div>`;
     }).join('');
 }
@@ -963,6 +974,7 @@ function confirmRound() {
     method   : m.method,
     shooter  : m.method==='fangchang' ? m.shooter : null,
     changes  : [...chg],
+    payment  : G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney,
     time     : now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
     banker   : prevBanker,
     streak   : prevStreak
@@ -998,7 +1010,7 @@ function renderHistory() {
           <span class="hist-badge ${isZimo?'badge-zimo':'badge-fang'}">${isZimo?'自摸':'放槍'}</span>
         </div>
         <div class="hist-winner">${colorDot(r.winner)}${wName}${shooterNote}</div>
-        <div class="hist-meta">${G.cfg.baseTai>0?`底${G.cfg.baseTai}+${r.tai}=`:''}${r.tai+G.cfg.baseTai} 台 · ${(r.tai+G.cfg.baseTai)*G.cfg.perTai} 點 · ${bankerNote}</div>
+        <div class="hist-meta">${r.payment} 元/份 · ${r.tai} 台 · ${bankerNote}</div>
         <div class="hist-chips">${chips}</div>
       </div>`;
   }).join('');
@@ -1011,44 +1023,29 @@ function renderSettlement() {
   const sorted = G.players.map((p,i) => ({...p, idx:i, net:p.score-G.cfg.start}))
     .sort((a,b) => b.net - a.net);
 
-  const moneyOn = G.cfg.moneyPerPt > 0;
-
   document.getElementById('sett-scores').innerHTML = sorted.map(p => {
     const cls = p.net>0?'pos':p.net<0?'neg':'zero';
-    const str = p.net>0?`+${p.net}`:p.net<0?`${p.net}`:'±0';
-    let mHtml = '';
-    if (moneyOn) {
-      const m = p.net * G.cfg.moneyPerPt;
-      const mc = m>0?'pos':m<0?'neg':'';
-      const ms = m>0?`+$${m}`:m<0?`-$${Math.abs(m)}`:'$0';
-      mHtml = `<div class="sett-money-label ${mc}">${ms}</div>`;
-    }
+    const str = p.net>0?`+$${p.net}`:p.net<0?`-$${Math.abs(p.net)}`:'$0';
     return `
       <div class="sett-row">
         <div class="sett-name">${colorDot(p.idx)}${p.name}</div>
         <div class="sett-right">
-          <div class="sett-pts ${cls}">${str} 點</div>
-          ${mHtml}
+          <div class="sett-pts ${cls}">${str}</div>
         </div>
       </div>`;
   }).join('');
 
-  if (moneyOn) {
-    document.getElementById('sett-money-card').style.display = 'block';
-    const debts = computeDebts();
-    document.getElementById('sett-debts').innerHTML = debts.length
-      ? debts.map(d => `<div class="debt-row">${d.from} 付給 ${d.to} <span class="debt-amount">$${d.amount}</span></div>`).join('')
-      : '<div style="color:#999;font-size:0.95rem;padding:8px 0">大家打平！</div>';
-  } else {
-    document.getElementById('sett-money-card').style.display = 'none';
-  }
+  document.getElementById('sett-money-card').style.display = 'block';
+  const debts = computeDebts();
+  document.getElementById('sett-debts').innerHTML = debts.length
+    ? debts.map(d => `<div class="debt-row">${d.from} 付給 ${d.to} <span class="debt-amount">$${d.amount}</span></div>`).join('')
+    : '<div style="color:#999;font-size:0.95rem;padding:8px 0">大家打平！</div>';
 }
 
 function computeDebts() {
-  // Debt minimization: pair biggest debtor with biggest creditor
   const bal = G.players.map((p,i) => ({
     name: p.name,
-    amt: (p.score - G.cfg.start) * G.cfg.moneyPerPt
+    amt: p.score
   }));
   const neg = bal.filter(b=>b.amt<0).map(b=>({...b})).sort((a,b)=>a.amt-b.amt);
   const pos = bal.filter(b=>b.amt>0).map(b=>({...b})).sort((a,b)=>b.amt-a.amt);
