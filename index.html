@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>麻將計分</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d4a1a;
+      --bg2: #0a3a14;
+      --gold: #c9a84c;
+      --gold-light: #e8c96c;
+      --red: #c41e3a;
+      --blue: #1e4fc4;
+      --cream: #f5f0e8;
+      --text: #1a1a1a;
+      --muted: #777;
+      --border: #e8e8e8;
+      --radius: 16px;
+    }
+
+    body {
+      font-family: -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* ===== VIEWS ===== */
+    .view { display: none; padding: 16px; min-height: 100vh; padding-bottom: 40px; }
+    .view.active { display: block; }
+
+    /* ===== SHARED ===== */
+    .card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+
+    .section-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .view-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 4px 18px;
+    }
+    .btn-back {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: white;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .view-header h2 { color: white; font-size: 1.3rem; font-weight: 700; }
+
+    /* ===== BUTTONS ===== */
+    .btn-primary {
+      width: 100%;
+      padding: 18px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #5a3a00;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      letter-spacing: 3px;
+      box-shadow: 0 4px 16px rgba(201,168,76,0.5);
+      transition: transform 0.1s;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-record {
+      width: 100%;
+      padding: 20px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, var(--red), #e8405a);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      letter-spacing: 3px;
+      box-shadow: 0 4px 16px rgba(196,30,58,0.45);
+      transition: transform 0.1s;
+    }
+    .btn-record:active { transform: scale(0.98); }
+
+    .btn-ghost {
+      flex: 1;
+      padding: 14px 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.1s;
+    }
+    .btn-ghost:active { background: rgba(255,255,255,0.2); }
+    .btn-ghost.danger { color: #ffaaaa; }
+
+    .btn-confirm {
+      width: 100%;
+      padding: 18px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, #0d4a1a, #1a7a30);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: opacity 0.2s;
+    }
+    .btn-confirm:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-cancel {
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    /* ===== SETUP ===== */
+    .setup-header {
+      text-align: center;
+      padding: 36px 0 28px;
+    }
+    .setup-header h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 6px;
+    }
+    .setup-header p {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.55);
+      margin-top: 6px;
+    }
+
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .player-row:last-child { margin-bottom: 0; }
+    .player-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .player-row input {
+      flex: 1;
+      font-size: 1.15rem;
+      padding: 13px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      transition: border-color 0.2s;
+    }
+    .player-row input:focus { border-color: var(--gold); }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #f2f2f2;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row label {
+      font-size: 1rem;
+      color: var(--text);
+    }
+    .settings-hint { font-size: 0.8rem; color: var(--muted); margin-left: 4px; }
+    .settings-row input {
+      width: 80px;
+      font-size: 1.1rem;
+      padding: 8px 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      text-align: center;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+    .settings-row input:focus { border-color: var(--gold); }
+
+    /* ===== GAME ===== */
+    .game-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 4px 18px;
+    }
+    .game-logo { color: var(--gold); font-size: 1.25rem; font-weight: 800; letter-spacing: 2px; }
+    .round-pill {
+      background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.85);
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .score-card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px 14px;
+      text-align: center;
+    }
+    .score-card-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .score-card-value {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text);
+    }
+    .score-card-net {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .net-pos { color: var(--red); }
+    .net-neg { color: var(--blue); }
+    .net-zero { color: var(--muted); }
+
+    .game-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn-row { display: flex; gap: 10px; }
+
+    /* ===== MODAL ===== */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 200;
+      align-items: flex-end;
+    }
+    .overlay.active { display: flex; }
+
+    .sheet {
+      width: 100%;
+      background: #f5f5f7;
+      border-radius: 24px 24px 0 0;
+      padding: 12px 20px 48px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: #d0d0d0;
+      border-radius: 2px;
+      margin: 8px auto 20px;
+    }
+    .sheet-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+    }
+
+    .select-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .sel-btn {
+      padding: 15px 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.12s;
+      text-align: center;
+    }
+    .sel-btn:active { transform: scale(0.96); }
+    .sel-btn.sel-red { border-color: var(--red); background: #fff0f2; color: var(--red); }
+    .sel-btn.sel-blue { border-color: var(--blue); background: #f0f2ff; color: var(--blue); }
+    .sel-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+    .tai-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+    .tai-adj {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      transition: background 0.1s;
+      line-height: 1;
+    }
+    .tai-adj:active { background: #f0f0f0; }
+    .tai-num {
+      font-size: 3.2rem;
+      font-weight: 800;
+      color: var(--text);
+      min-width: 64px;
+      text-align: center;
+      line-height: 1;
+    }
+    .tai-unit { font-size: 1rem; color: var(--muted); font-weight: 500; }
+
+    .method-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .method-btn {
+      flex: 1;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      color: var(--text);
+      text-align: center;
+      transition: all 0.12s;
+    }
+    .method-btn.sel-gold {
+      border-color: var(--gold);
+      background: #fffbf0;
+      color: #7a5b00;
+    }
+
+    .preview-box {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .preview-title {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      font-size: 1rem;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .preview-row:last-child { border-bottom: none; }
+    .preview-name { color: var(--text); font-weight: 500; }
+    .preview-chg { font-weight: 700; }
+    .chg-gain { color: var(--red); }
+    .chg-lose { color: var(--blue); }
+    .chg-none { color: #bbb; }
+    .preview-hint {
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    /* ===== HISTORY ===== */
+    .history-empty {
+      text-align: center;
+      color: rgba(255,255,255,0.4);
+      padding: 70px 0;
+      font-size: 1.1rem;
+    }
+    .history-item {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+    .hist-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .hist-round { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+    .hist-badge {
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge-zimo { background: #fff0f2; color: var(--red); }
+    .badge-fang { background: #f0f2ff; color: var(--blue); }
+    .hist-winner { font-size: 1rem; font-weight: 700; color: var(--red); margin-bottom: 6px; }
+    .hist-meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; }
+    .hist-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+    .hchip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .hchip-gain { background: #fff0f2; color: var(--red); }
+    .hchip-lose { background: #f0f2ff; color: var(--blue); }
+    .hchip-none { background: #f5f5f5; color: #bbb; }
+
+    /* ===== SETTLEMENT ===== */
+    .sett-header {
+      text-align: center;
+      padding: 32px 0 22px;
+    }
+    .sett-header h2 { color: var(--gold); font-size: 1.9rem; font-weight: 800; letter-spacing: 2px; }
+    .sett-header p { color: rgba(255,255,255,0.55); font-size: 0.9rem; margin-top: 6px; }
+
+    .sett-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #f2f2f2;
+    }
+    .sett-row:last-child { border-bottom: none; }
+    .sett-name { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .sett-right { text-align: right; }
+    .sett-pts { font-size: 1.5rem; font-weight: 800; }
+    .sett-pts.pos { color: var(--red); }
+    .sett-pts.neg { color: var(--blue); }
+    .sett-pts.zero { color: var(--muted); }
+    .sett-money-label { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .sett-money-label.pos { color: var(--red); }
+    .sett-money-label.neg { color: var(--blue); }
+
+    .debt-row {
+      padding: 11px 0;
+      border-bottom: 1px solid #f2f2f2;
+      font-size: 1rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .debt-row:last-child { border-bottom: none; }
+    .debt-amount { font-weight: 800; color: var(--blue); }
+
+    .sett-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+    .btn-new-game {
+      width: 100%;
+      padding: 18px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #5a3a00;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============ SETUP VIEW ============ -->
+<div class="view active" id="v-setup">
+  <div class="setup-header">
+    <h1>麻將計分</h1>
+    <p>每人起始 100 點</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">玩家姓名</div>
+    <div class="player-row">
+      <div class="player-dot" style="background:#e8a020"></div>
+      <input type="text" id="p0" placeholder="玩家一" maxlength="6">
+    </div>
+    <div class="player-row">
+      <div class="player-dot" style="background:#2d8a4e"></div>
+      <input type="text" id="p1" placeholder="玩家二" maxlength="6">
+    </div>
+    <div class="player-row">
+      <div class="player-dot" style="background:#2060c8"></div>
+      <input type="text" id="p2" placeholder="玩家三" maxlength="6">
+    </div>
+    <div class="player-row">
+      <div class="player-dot" style="background:#c41e3a"></div>
+      <input type="text" id="p3" placeholder="玩家四" maxlength="6">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">計分設定</div>
+    <div class="settings-row">
+      <label>起始點數</label>
+      <input type="number" id="s-start" value="100" min="10" max="9999" inputmode="numeric">
+    </div>
+    <div class="settings-row">
+      <label>每台點數</label>
+      <input type="number" id="s-tai" value="1" min="1" max="999" inputmode="numeric">
+    </div>
+    <div class="settings-row">
+      <label>每點金額 <span class="settings-hint">(0=不換算)</span></label>
+      <input type="number" id="s-money" value="0" min="0" max="9999" inputmode="numeric">
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="startGame()">開始遊戲</button>
+</div>
+
+<!-- ============ GAME VIEW ============ -->
+<div class="view" id="v-game">
+  <div class="game-topbar">
+    <span class="game-logo">麻將計分</span>
+    <span class="round-pill" id="round-pill">第 0 局</span>
+  </div>
+
+  <div class="scoreboard" id="scoreboard"></div>
+
+  <div class="game-actions">
+    <button class="btn-record" onclick="openModal()">記錄本局</button>
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="showHistory()">歷史紀錄</button>
+      <button class="btn-ghost" onclick="showSettlement()">結算</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn-ghost danger" onclick="confirmNewGame()">重新開局</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ROUND MODAL ============ -->
+<div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">記錄本局</div>
+
+    <div class="section-label">誰贏了？</div>
+    <div class="select-grid" id="winner-grid"></div>
+
+    <div class="section-label">幾台？</div>
+    <div class="tai-row">
+      <button class="tai-adj" onclick="changeTai(-1)">−</button>
+      <div style="text-align:center">
+        <div class="tai-num" id="tai-val">1</div>
+        <div class="tai-unit">台</div>
+      </div>
+      <button class="tai-adj" onclick="changeTai(+1)">+</button>
+    </div>
+
+    <div class="section-label">胡法</div>
+    <div class="method-row">
+      <button class="method-btn" id="m-zimo" onclick="pickMethod('zimo')">自摸</button>
+      <button class="method-btn" id="m-fang" onclick="pickMethod('fangchang')">放槍</button>
+    </div>
+
+    <div id="shooter-wrap" style="display:none">
+      <div class="section-label">誰放槍？</div>
+      <div class="select-grid" id="shooter-grid"></div>
+    </div>
+
+    <div class="preview-box">
+      <div class="preview-title">本局預覽</div>
+      <div id="preview"></div>
+    </div>
+
+    <button class="btn-confirm" id="btn-confirm" disabled onclick="confirmRound()">確認記錄</button>
+    <button class="btn-cancel" onclick="closeModal()">取消</button>
+  </div>
+</div>
+
+<!-- ============ HISTORY VIEW ============ -->
+<div class="view" id="v-history">
+  <div class="view-header">
+    <button class="btn-back" onclick="showGame()">←</button>
+    <h2>歷史紀錄</h2>
+  </div>
+  <div id="history-list"></div>
+</div>
+
+<!-- ============ SETTLEMENT VIEW ============ -->
+<div class="view" id="v-settlement">
+  <div class="sett-header">
+    <h2>最終結算</h2>
+    <p id="sett-sub"></p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">各玩家點數</div>
+    <div id="sett-scores"></div>
+  </div>
+
+  <div class="card" id="sett-money-card" style="display:none">
+    <div class="card-title">金額結算</div>
+    <div id="sett-debts"></div>
+  </div>
+
+  <div class="sett-actions">
+    <button class="btn-new-game" onclick="confirmNewGame()">新的一局</button>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn-ghost" onclick="showGame()">繼續遊戲</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== CONSTANTS =====
+const COLORS = ['#e8a020','#2d8a4e','#2060c8','#c41e3a'];
+const DEFAULTS = ['玩家一','玩家二','玩家三','玩家四'];
+
+// ===== STATE =====
+let G = {
+  players: [],       // [{name, score}]
+  rounds: [],        // [{roundNum,winner,tai,method,shooter,changes,time}]
+  cfg: { start:100, perTai:1, moneyPerPt:0 },
+  modal: { winner:null, tai:1, method:null, shooter:null }
+};
+
+// ===== VIEW =====
+function show(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showGame()       { show('v-game');       renderGame(); }
+function showHistory()    { show('v-history');    renderHistory(); }
+function showSettlement() { show('v-settlement'); renderSettlement(); }
+
+// ===== SETUP =====
+function startGame() {
+  const names = [0,1,2,3].map(i => {
+    const v = document.getElementById('p'+i).value.trim();
+    return v || DEFAULTS[i];
+  });
+  G.cfg.start   = Math.max(10, parseInt(document.getElementById('s-start').value) || 100);
+  G.cfg.perTai  = Math.max(1,  parseInt(document.getElementById('s-tai').value)   || 1);
+  G.cfg.moneyPerPt = Math.max(0, parseInt(document.getElementById('s-money').value) || 0);
+  G.players = names.map(name => ({ name, score: G.cfg.start }));
+  G.rounds  = [];
+  showGame();
+}
+
+// ===== GAME RENDER =====
+function colorDot(i) {
+  return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLORS[i]};margin-right:6px;vertical-align:middle"></span>`;
+}
+
+function renderGame() {
+  document.getElementById('round-pill').textContent = `第 ${G.rounds.length} 局`;
+  document.getElementById('scoreboard').innerHTML = G.players.map((p,i) => {
+    const net = p.score - G.cfg.start;
+    const netCls = net>0?'net-pos':net<0?'net-neg':'net-zero';
+    const netStr = net>0?`+${net}`:net<0?`${net}`:'±0';
+    return `
+      <div class="score-card">
+        <div class="score-card-name">${colorDot(i)}${p.name}</div>
+        <div class="score-card-value">${p.score}</div>
+        <div class="score-card-net ${netCls}">${netStr} 點</div>
+      </div>`;
+  }).join('');
+}
+
+// ===== MODAL =====
+function openModal() {
+  G.modal = { winner:null, tai:1, method:null, shooter:null };
+  renderModal();
+  document.getElementById('overlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('overlay').classList.remove('active');
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+
+function renderModal() {
+  const m = G.modal;
+
+  // Winner grid
+  document.getElementById('winner-grid').innerHTML = G.players.map((p,i) =>
+    `<button class="sel-btn ${m.winner===i?'sel-red':''}" onclick="pickWinner(${i})">
+      ${colorDot(i)}${p.name}
+    </button>`
+  ).join('');
+
+  // Tai
+  document.getElementById('tai-val').textContent = m.tai;
+
+  // Method buttons
+  document.getElementById('m-zimo').className = 'method-btn' + (m.method==='zimo'?' sel-gold':'');
+  document.getElementById('m-fang').className = 'method-btn' + (m.method==='fangchang'?' sel-gold':'');
+
+  // Shooter
+  if (m.method === 'fangchang') {
+    document.getElementById('shooter-wrap').style.display = 'block';
+    document.getElementById('shooter-grid').innerHTML = G.players.map((p,i) => {
+      const disabled = m.winner === i ? 'disabled' : '';
+      const sel = m.shooter === i ? 'sel-blue' : '';
+      return `<button class="sel-btn ${sel}" ${disabled} onclick="pickShooter(${i})">
+        ${colorDot(i)}${p.name}
+      </button>`;
+    }).join('');
+  } else {
+    document.getElementById('shooter-wrap').style.display = 'none';
+  }
+
+  renderPreview();
+
+  const ready = m.winner !== null && m.method !== null &&
+    (m.method !== 'fangchang' || m.shooter !== null);
+  document.getElementById('btn-confirm').disabled = !ready;
+}
+
+function pickWinner(i)  { G.modal.winner=i; if(G.modal.shooter===i) G.modal.shooter=null; renderModal(); }
+function pickMethod(m)  { G.modal.method=m; if(m==='zimo') G.modal.shooter=null; renderModal(); }
+function pickShooter(i) { G.modal.shooter=i; renderModal(); }
+function changeTai(d)   { G.modal.tai=Math.max(1,Math.min(20,G.modal.tai+d)); renderModal(); }
+
+function calcChanges(m) {
+  const pts = m.tai * G.cfg.perTai;
+  return G.players.map((_,i) => {
+    if (i === m.winner) return m.method==='zimo' ? pts*3 : pts;
+    if (m.method === 'zimo') return -pts;
+    if (i === m.shooter)    return -pts;
+    return 0;
+  });
+}
+
+function renderPreview() {
+  const m = G.modal;
+  if (m.winner===null || m.method===null) {
+    document.getElementById('preview').innerHTML = '<div class="preview-hint">請選擇贏家和胡法</div>';
+    return;
+  }
+  if (m.method==='fangchang' && m.shooter===null) {
+    document.getElementById('preview').innerHTML = '<div class="preview-hint">請選擇放槍者</div>';
+    return;
+  }
+  const chg = calcChanges(m);
+  document.getElementById('preview').innerHTML = G.players.map((p,i) => {
+    const c = chg[i];
+    const cls = c>0?'chg-gain':c<0?'chg-lose':'chg-none';
+    const str = c>0?`+${c}`:c===0?'不變':`${c}`;
+    return `<div class="preview-row">
+      <span class="preview-name">${colorDot(i)}${p.name}</span>
+      <span class="preview-chg ${cls}">${str} 點</span>
+    </div>`;
+  }).join('');
+}
+
+function confirmRound() {
+  const m = G.modal;
+  if (m.winner===null || m.method===null) return;
+  if (m.method==='fangchang' && m.shooter===null) return;
+
+  const chg = calcChanges(m);
+  G.players.forEach((p,i) => p.score += chg[i]);
+
+  const now = new Date();
+  G.rounds.push({
+    roundNum : G.rounds.length+1,
+    winner   : m.winner,
+    tai      : m.tai,
+    method   : m.method,
+    shooter  : m.method==='fangchang' ? m.shooter : null,
+    changes  : [...chg],
+    time     : now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})
+  });
+
+  closeModal();
+  renderGame();
+}
+
+// ===== HISTORY =====
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!G.rounds.length) {
+    el.innerHTML = '<div class="history-empty">尚無紀錄</div>';
+    return;
+  }
+  el.innerHTML = [...G.rounds].reverse().map(r => {
+    const wName = G.players[r.winner].name;
+    const isZimo = r.method === 'zimo';
+    const shooterNote = isZimo ? '' : `（${G.players[r.shooter].name} 放槍）`;
+    const chips = G.players.map((p,i) => {
+      const c = r.changes[i];
+      const cls = c>0?'hchip-gain':c<0?'hchip-lose':'hchip-none';
+      const str = c>0?`+${c}`:c===0?'—':`${c}`;
+      return `<span class="hchip ${cls}">${p.name} ${str}</span>`;
+    }).join('');
+    return `
+      <div class="history-item">
+        <div class="hist-top">
+          <span class="hist-round">第 ${r.roundNum} 局 · ${r.time}</span>
+          <span class="hist-badge ${isZimo?'badge-zimo':'badge-fang'}">${isZimo?'自摸':'放槍'}</span>
+        </div>
+        <div class="hist-winner">${colorDot(r.winner)}${wName}${shooterNote}</div>
+        <div class="hist-meta">${r.tai} 台 · ${r.tai*G.cfg.perTai} 點</div>
+        <div class="hist-chips">${chips}</div>
+      </div>`;
+  }).join('');
+}
+
+// ===== SETTLEMENT =====
+function renderSettlement() {
+  document.getElementById('sett-sub').textContent = `共 ${G.rounds.length} 局`;
+
+  const sorted = G.players.map((p,i) => ({...p, idx:i, net:p.score-G.cfg.start}))
+    .sort((a,b) => b.net - a.net);
+
+  const moneyOn = G.cfg.moneyPerPt > 0;
+
+  document.getElementById('sett-scores').innerHTML = sorted.map(p => {
+    const cls = p.net>0?'pos':p.net<0?'neg':'zero';
+    const str = p.net>0?`+${p.net}`:p.net<0?`${p.net}`:'±0';
+    let mHtml = '';
+    if (moneyOn) {
+      const m = p.net * G.cfg.moneyPerPt;
+      const mc = m>0?'pos':m<0?'neg':'';
+      const ms = m>0?`+$${m}`:m<0?`-$${Math.abs(m)}`:'$0';
+      mHtml = `<div class="sett-money-label ${mc}">${ms}</div>`;
+    }
+    return `
+      <div class="sett-row">
+        <div class="sett-name">${colorDot(p.idx)}${p.name}</div>
+        <div class="sett-right">
+          <div class="sett-pts ${cls}">${str} 點</div>
+          ${mHtml}
+        </div>
+      </div>`;
+  }).join('');
+
+  if (moneyOn) {
+    document.getElementById('sett-money-card').style.display = 'block';
+    const debts = computeDebts();
+    document.getElementById('sett-debts').innerHTML = debts.length
+      ? debts.map(d => `<div class="debt-row">${d.from} 付給 ${d.to} <span class="debt-amount">$${d.amount}</span></div>`).join('')
+      : '<div style="color:#999;font-size:0.95rem;padding:8px 0">大家打平！</div>';
+  } else {
+    document.getElementById('sett-money-card').style.display = 'none';
+  }
+}
+
+function computeDebts() {
+  // Debt minimization: pair biggest debtor with biggest creditor
+  const bal = G.players.map((p,i) => ({
+    name: p.name,
+    amt: (p.score - G.cfg.start) * G.cfg.moneyPerPt
+  }));
+  const neg = bal.filter(b=>b.amt<0).map(b=>({...b})).sort((a,b)=>a.amt-b.amt);
+  const pos = bal.filter(b=>b.amt>0).map(b=>({...b})).sort((a,b)=>b.amt-a.amt);
+  const debts = [];
+  let ni=0, pi=0;
+  while (ni<neg.length && pi<pos.length) {
+    const pay = Math.min(-neg[ni].amt, pos[pi].amt);
+    if (pay > 0) debts.push({ from:neg[ni].name, to:pos[pi].name, amount:pay });
+    neg[ni].amt += pay;
+    pos[pi].amt -= pay;
+    if (neg[ni].amt===0) ni++;
+    if (pos[pi].amt===0) pi++;
+  }
+  return debts;
+}
+
+// ===== NEW GAME =====
+function confirmNewGame() {
+  if (G.rounds.length > 0 && !confirm('確定要重新開局嗎？本局記錄將會清除。')) return;
+  show('v-setup');
+}
+</script>
+</body>
+</html>
