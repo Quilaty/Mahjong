@@ -291,13 +291,19 @@
       padding: 14px 4px 18px;
     }
     .game-logo { color: var(--gold); font-size: 1.25rem; font-weight: 800; letter-spacing: 2px; }
+    .ju-label {
+      color: var(--gold);
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-align: right;
+    }
     .round-pill {
-      background: rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.85);
-      padding: 7px 16px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      font-weight: 600;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.78rem;
+      font-weight: 500;
+      text-align: right;
+      margin-top: 2px;
     }
 
     .scoreboard {
@@ -685,7 +691,10 @@
 <div class="view" id="v-game">
   <div class="game-topbar">
     <span class="game-logo">麻將計分</span>
-    <span class="round-pill" id="round-pill">第 0 局</span>
+    <div style="text-align:right">
+      <div class="ju-label" id="ju-label">東風東局</div>
+      <div class="round-pill" id="round-pill">第 0 局</div>
+    </div>
   </div>
 
   <div class="scoreboard" id="scoreboard"></div>
@@ -706,7 +715,7 @@
 <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
   <div class="sheet" id="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">記錄本局</div>
+    <div class="sheet-title" id="sheet-title">記錄本局</div>
 
     <div class="section-label">誰贏了？</div>
     <div class="select-grid" id="winner-grid"></div>
@@ -788,8 +797,9 @@ let G = {
   rounds: [],        // [{roundNum,winner,tai,method,shooter,changes,time,banker}]
   cfg: { baseMoney:50, perTaiMoney:20 },
   modal: { winner:null, tai:1, method:null, shooter:null },
-  banker: 0,         // 目前莊家 index
-  bankerStreak: 0    // 連莊次數（0 = 第一莊）
+  banker: 0,         // 目前莊家 index（0=東 1=南 2=西 3=北）
+  bankerStreak: 0,   // 連莊次數（0 = 第一莊）
+  windRound: 0       // 場風（0=東風 1=南風 2=西風 3=北風）
 };
 
 // ===== VIEW =====
@@ -822,9 +832,10 @@ function startGame() {
   G.cfg.baseMoney   = Math.max(0, parseInt(document.getElementById('s-base').value) || 0);
   G.cfg.perTaiMoney = Math.max(1, parseInt(document.getElementById('s-tai').value)  || 1);
   G.players = names.map(name => ({ name, score: 0 }));
-  G.rounds  = [];
-  G.banker  = 0;
+  G.rounds       = [];
+  G.banker       = 0;
   G.bankerStreak = 0;
+  G.windRound    = 0;
   showGame();
 }
 
@@ -833,7 +844,12 @@ function colorDot(i) {
   return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLORS[i]};margin-right:6px;vertical-align:middle"></span>`;
 }
 
+function currentJu() {
+  return `${DIRS[G.windRound]}風${DIRS[G.banker]}局`;
+}
+
 function renderGame() {
+  document.getElementById('ju-label').textContent = currentJu();
   document.getElementById('round-pill').textContent = `第 ${G.rounds.length} 局`;
   document.getElementById('scoreboard').innerHTML = G.players.map((p,i) => {
     const isBanker = i === G.banker;
@@ -858,6 +874,7 @@ function renderGame() {
 // ===== MODAL =====
 function openModal() {
   G.modal = { winner:null, tai:1, method:null, shooter:null };
+  document.getElementById('sheet-title').textContent = currentJu();
   renderModal();
   document.getElementById('overlay').classList.add('active');
 }
@@ -956,28 +973,33 @@ function confirmRound() {
   G.players.forEach((p,i) => p.score += chg[i]);
 
   const now = new Date();
-  const prevBanker = G.banker;
-  const prevStreak = G.bankerStreak;
+  const prevBanker    = G.banker;
+  const prevStreak    = G.bankerStreak;
+  const prevWindRound = G.windRound;
 
   // 莊家輪轉：贏家是莊 → 連莊；否則輪到下一位
   if (m.winner === G.banker) {
     G.bankerStreak++;
   } else {
-    G.banker = (G.banker + 1) % 4;
+    const nextBanker = (G.banker + 1) % 4;
+    // 北家結束輪到東，場風進一圈
+    if (nextBanker === 0 && G.windRound < 3) G.windRound++;
+    G.banker = nextBanker;
     G.bankerStreak = 0;
   }
 
   G.rounds.push({
-    roundNum : G.rounds.length+1,
-    winner   : m.winner,
-    tai      : m.tai,
-    method   : m.method,
-    shooter  : m.method==='fangchang' ? m.shooter : null,
-    changes  : [...chg],
-    payment  : G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney,
-    time     : now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
-    banker   : prevBanker,
-    streak   : prevStreak
+    roundNum  : G.rounds.length+1,
+    ju        : `${DIRS[prevWindRound]}風${DIRS[prevBanker]}局`,
+    winner    : m.winner,
+    tai       : m.tai,
+    method    : m.method,
+    shooter   : m.method==='fangchang' ? m.shooter : null,
+    changes   : [...chg],
+    payment   : G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney,
+    time      : now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
+    banker    : prevBanker,
+    streak    : prevStreak
   });
 
   closeModal();
@@ -1006,7 +1028,7 @@ function renderHistory() {
     return `
       <div class="history-item">
         <div class="hist-top">
-          <span class="hist-round">第 ${r.roundNum} 局 · ${r.time}</span>
+          <span class="hist-round">${r.ju} · 第 ${r.roundNum} 局 · ${r.time}</span>
           <span class="hist-badge ${isZimo?'badge-zimo':'badge-fang'}">${isZimo?'自摸':'放槍'}</span>
         </div>
         <div class="hist-winner">${colorDot(r.winner)}${wName}${shooterNote}</div>
