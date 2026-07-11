@@ -582,6 +582,7 @@
     <button class="btn-new-game" onclick="confirmNewGame()">新的一局</button>
     <div class="btn-row" style="margin-top:4px">
       <button class="btn-ghost" onclick="showGame()">繼續遊戲</button>
+      <button class="btn-ghost" onclick="exportCSV()">匯出 CSV</button>
     </div>
   </div>
 </div>
@@ -889,6 +890,65 @@ function computeDebts() {
     if (pos[pi].amt===0) pi++;
   }
   return debts;
+}
+
+// ===== CSV EXPORT =====
+function exportCSV() {
+  const esc = s => `"${String(s).replace(/"/g, '""')}"`;
+  const rows = [];
+
+  // 每局明細
+  rows.push(['每局明細']);
+  rows.push(['局數','風局','時間','贏家','台數','胡法','放槍者','每份金額',
+    ...G.players.map(p => p.name + ' 盈虧')]);
+  G.rounds.forEach(r => {
+    rows.push([
+      r.roundNum,
+      r.ju,
+      r.time,
+      G.players[r.winner].name,
+      r.tai,
+      r.method === 'zimo' ? '自摸' : '放槍',
+      r.shooter !== null ? G.players[r.shooter].name : '',
+      r.payment,
+      ...r.changes.map(c => c > 0 ? `+${c}` : c)
+    ]);
+  });
+
+  rows.push([]);
+
+  // 最終結算
+  rows.push(['最終結算']);
+  rows.push(['玩家', '淨盈虧', ...(G.cfg.budget > 0 ? ['剩餘'] : [])]);
+  G.players.forEach(p => {
+    const net = p.score;
+    const netStr = net > 0 ? `+${net}` : net;
+    rows.push([
+      p.name,
+      netStr,
+      ...(G.cfg.budget > 0 ? [G.cfg.budget + net] : [])
+    ]);
+  });
+
+  rows.push([]);
+
+  // 轉帳明細
+  const debts = computeDebts();
+  if (debts.length) {
+    rows.push(['轉帳明細']);
+    rows.push(['付款人', '收款人', '金額']);
+    debts.forEach(d => rows.push([d.from, d.to, d.amount]));
+  }
+
+  const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toLocaleDateString('zh-TW').replace(/\//g, '-');
+  a.href = url;
+  a.download = `麻將計分_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ===== NEW GAME =====
