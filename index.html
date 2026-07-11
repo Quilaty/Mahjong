@@ -600,19 +600,19 @@
     <div class="card-title">玩家姓名</div>
     <div class="player-row">
       <div class="player-dot" style="background:#e8a020"></div>
-      <input type="text" id="p0" placeholder="玩家一" maxlength="6">
+      <input type="text" id="p0" placeholder="東方玩家" maxlength="6">
     </div>
     <div class="player-row">
       <div class="player-dot" style="background:#2d8a4e"></div>
-      <input type="text" id="p1" placeholder="玩家二" maxlength="6">
+      <input type="text" id="p1" placeholder="南方玩家" maxlength="6">
     </div>
     <div class="player-row">
       <div class="player-dot" style="background:#2060c8"></div>
-      <input type="text" id="p2" placeholder="玩家三" maxlength="6">
+      <input type="text" id="p2" placeholder="西方玩家" maxlength="6">
     </div>
     <div class="player-row">
       <div class="player-dot" style="background:#c41e3a"></div>
-      <input type="text" id="p3" placeholder="玩家四" maxlength="6">
+      <input type="text" id="p3" placeholder="北方玩家" maxlength="6">
     </div>
   </div>
 
@@ -620,7 +620,11 @@
     <div class="card-title">計分設定</div>
     <div class="settings-row">
       <label>起始點數</label>
-      <input type="number" id="s-start" value="100" min="10" max="9999" inputmode="numeric">
+      <input type="number" id="s-start" value="100" min="10" max="9999" step="10" inputmode="numeric">
+    </div>
+    <div class="settings-row">
+      <label>底台 <span class="settings-hint">(每局固定加)</span></label>
+      <input type="number" id="s-base" value="0" min="0" max="99" inputmode="numeric">
     </div>
     <div class="settings-row">
       <label>每台點數</label>
@@ -733,14 +737,14 @@
 <script>
 // ===== CONSTANTS =====
 const COLORS = ['#e8a020','#2d8a4e','#2060c8','#c41e3a'];
-const DEFAULTS = ['玩家一','玩家二','玩家三','玩家四'];
+const DEFAULTS = ['東方玩家','南方玩家','西方玩家','北方玩家'];
 const DIRS = ['東','南','西','北'];
 
 // ===== STATE =====
 let G = {
   players: [],       // [{name, score}]
   rounds: [],        // [{roundNum,winner,tai,method,shooter,changes,time,banker}]
-  cfg: { start:100, perTai:1, moneyPerPt:0 },
+  cfg: { start:100, baseTai:0, perTai:1, moneyPerPt:0 },
   modal: { winner:null, tai:1, method:null, shooter:null },
   banker: 0,         // 目前莊家 index
   bankerStreak: 0    // 連莊次數（0 = 第一莊）
@@ -762,8 +766,9 @@ function startGame() {
     const v = document.getElementById('p'+i).value.trim();
     return v || DEFAULTS[i];
   });
-  G.cfg.start   = Math.max(10, parseInt(document.getElementById('s-start').value) || 100);
-  G.cfg.perTai  = Math.max(1,  parseInt(document.getElementById('s-tai').value)   || 1);
+  G.cfg.start    = Math.max(10, parseInt(document.getElementById('s-start').value) || 100);
+  G.cfg.baseTai  = Math.max(0,  parseInt(document.getElementById('s-base').value)  || 0);
+  G.cfg.perTai   = Math.max(1,  parseInt(document.getElementById('s-tai').value)   || 1);
   G.cfg.moneyPerPt = Math.max(0, parseInt(document.getElementById('s-money').value) || 0);
   G.players = names.map(name => ({ name, score: G.cfg.start }));
   G.rounds  = [];
@@ -857,7 +862,8 @@ function pickShooter(i) { G.modal.shooter=i; renderModal(); }
 function changeTai(d)   { G.modal.tai=Math.max(1,Math.min(20,G.modal.tai+d)); renderModal(); }
 
 function calcChanges(m) {
-  const pts = m.tai * G.cfg.perTai;
+  const totalTai = m.tai + G.cfg.baseTai;
+  const pts = totalTai * G.cfg.perTai;
   return G.players.map((_,i) => {
     if (i === m.winner) return m.method==='zimo' ? pts*3 : pts;
     if (m.method === 'zimo') return -pts;
@@ -877,15 +883,21 @@ function renderPreview() {
     return;
   }
   const chg = calcChanges(m);
-  document.getElementById('preview').innerHTML = G.players.map((p,i) => {
-    const c = chg[i];
-    const cls = c>0?'chg-gain':c<0?'chg-lose':'chg-none';
-    const str = c>0?`+${c}`:c===0?'不變':`${c}`;
-    return `<div class="preview-row">
-      <span class="preview-name">${colorDot(i)}${p.name}</span>
-      <span class="preview-chg ${cls}">${str} 點</span>
-    </div>`;
-  }).join('');
+  const totalTai = m.tai + G.cfg.baseTai;
+  const taiNote = G.cfg.baseTai > 0
+    ? `底台${G.cfg.baseTai} + ${m.tai}台 = ${totalTai}台`
+    : `${m.tai} 台`;
+  document.getElementById('preview').innerHTML =
+    `<div class="preview-title" style="margin-bottom:8px">${taiNote} · ${totalTai * G.cfg.perTai} 點/份</div>` +
+    G.players.map((p,i) => {
+      const c = chg[i];
+      const cls = c>0?'chg-gain':c<0?'chg-lose':'chg-none';
+      const str = c>0?`+${c}`:c===0?'不變':`${c}`;
+      return `<div class="preview-row">
+        <span class="preview-name">${colorDot(i)}${p.name}</span>
+        <span class="preview-chg ${cls}">${str} 點</span>
+      </div>`;
+    }).join('');
 }
 
 function confirmRound() {
@@ -950,7 +962,7 @@ function renderHistory() {
           <span class="hist-badge ${isZimo?'badge-zimo':'badge-fang'}">${isZimo?'自摸':'放槍'}</span>
         </div>
         <div class="hist-winner">${colorDot(r.winner)}${wName}${shooterNote}</div>
-        <div class="hist-meta">${r.tai} 台 · ${r.tai*G.cfg.perTai} 點 · ${bankerNote}</div>
+        <div class="hist-meta">${G.cfg.baseTai>0?`底${G.cfg.baseTai}+${r.tai}=`:''}${r.tai+G.cfg.baseTai} 台 · ${(r.tai+G.cfg.baseTai)*G.cfg.perTai} 點 · ${bankerNote}</div>
         <div class="hist-chips">${chips}</div>
       </div>`;
   }).join('');
