@@ -507,6 +507,7 @@
       <button class="btn-ghost" onclick="showSettlement()">結算</button>
     </div>
     <div class="btn-row">
+      <button class="btn-ghost" id="btn-edit-last" onclick="editLastRound()" style="display:none">修改上一局</button>
       <button class="btn-ghost danger" onclick="confirmNewGame()">重新開局</button>
     </div>
   </div>
@@ -673,6 +674,7 @@ function renderGame() {
         <div class="score-card-net ${remain!==null?(remain<G.cfg.budget?'net-neg':remain>G.cfg.budget?'net-pos':'net-zero'):''}">${remain!==null?`剩 $${remain}`:'&nbsp;'}</div>
       </div>`;
   }).join('');
+  document.getElementById('btn-edit-last').style.display = G.rounds.length ? '' : 'none';
 }
 
 // ===== MODAL =====
@@ -805,7 +807,8 @@ function confirmRound() {
     payment   : G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney,
     time      : now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
     banker    : prevBanker,
-    streak    : prevStreak
+    streak    : prevStreak,
+    windRound : prevWindRound
   });
 
   closeModal();
@@ -890,6 +893,29 @@ function computeDebts() {
     if (pos[pi].amt===0) pi++;
   }
   return debts;
+}
+
+// ===== EDIT LAST ROUND =====
+function editLastRound() {
+  if (!G.rounds.length) return;
+  const last = G.rounds[G.rounds.length - 1];
+
+  // 撤銷上一局的分數
+  G.players.forEach((p, i) => p.score -= last.changes[i]);
+
+  // 還原莊家狀態
+  G.banker       = last.banker;
+  G.bankerStreak = last.streak;
+  G.windRound    = last.windRound;
+
+  // 移除上一局紀錄
+  G.rounds.pop();
+
+  // 帶入舊資料開啟 modal
+  G.modal = { winner: last.winner, tai: last.tai, method: last.method, shooter: last.shooter };
+  document.getElementById('sheet-title').textContent = currentJu();
+  renderModal();
+  document.getElementById('overlay').classList.add('active');
 }
 
 // ===== CSV EXPORT =====
