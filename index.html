@@ -211,6 +211,66 @@
     }
     .money-inline input:focus { border-color: var(--gold); }
 
+    .rate-card { border: 2px solid var(--gold); background: #fffbf0; }
+    .rate-card .card-title { color: #7a5b00; }
+    .rate-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .rate-input {
+      flex: 1;
+      font-size: 2.2rem;
+      font-weight: 800;
+      padding: 10px 8px;
+      border: 2px solid #e8d080;
+      border-radius: 12px;
+      text-align: center;
+      outline: none;
+      font-family: inherit;
+      color: #5a3a00;
+      background: white;
+      min-width: 0;
+    }
+    .rate-input:focus { border-color: var(--gold); }
+    .rate-slash {
+      font-size: 2rem;
+      font-weight: 300;
+      color: #c9a84c;
+      flex-shrink: 0;
+    }
+    .money-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .money-currency {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .money-input {
+      flex: 1;
+      font-size: 1.8rem;
+      font-weight: 800;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      text-align: right;
+    }
+    .money-input:focus { border-color: var(--gold); }
+    .money-unit {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
     .setup-header {
       text-align: center;
       padding: clamp(20px, 6vw, 36px) 0 clamp(16px, 4vw, 28px);
@@ -666,21 +726,24 @@
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">金額設定</div>
-    <div class="settings-row">
-      <label>底台</label>
-      <div class="money-inline">
-        <input type="number" id="s-base" value="50" min="0" max="9999" step="10" inputmode="numeric">
-        <span class="settings-hint">元</span>
-      </div>
+  <div class="card rate-card">
+    <div class="card-title">底台 / 每台（元）</div>
+    <div class="rate-row">
+      <input type="number" id="s-base" value="50" min="0" max="9999" step="10"
+             inputmode="numeric" class="rate-input" placeholder="50">
+      <span class="rate-slash">/</span>
+      <input type="number" id="s-tai" value="20" min="1" max="9999" step="10"
+             inputmode="numeric" class="rate-input" placeholder="20">
     </div>
-    <div class="settings-row">
-      <label>每台</label>
-      <div class="money-inline">
-        <input type="number" id="s-tai" value="20" min="1" max="9999" step="10" inputmode="numeric">
-        <span class="settings-hint">元</span>
-      </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">每人帶入</div>
+    <div class="money-input-row">
+      <span class="money-currency">玩</span>
+      <input type="number" id="s-budget" value="1000" min="0" max="999999" step="100"
+             inputmode="numeric" class="money-input" placeholder="1000">
+      <span class="money-unit">塊</span>
     </div>
   </div>
 
@@ -795,7 +858,7 @@ const DIRS = ['東','南','西','北'];
 let G = {
   players: [],       // [{name, score}]
   rounds: [],        // [{roundNum,winner,tai,method,shooter,changes,time,banker}]
-  cfg: { baseMoney:50, perTaiMoney:20 },
+  cfg: { baseMoney:50, perTaiMoney:20, budget:1000 },
   modal: { winner:null, tai:1, method:null, shooter:null },
   banker: 0,         // 目前莊家 index（0=東 1=南 2=西 3=北）
   bankerStreak: 0,   // 連莊次數（0 = 第一莊）
@@ -829,8 +892,9 @@ function startGame() {
     const v = document.getElementById('p'+i).value.trim();
     return v || DEFAULTS[i];
   });
-  G.cfg.baseMoney   = Math.max(0, parseInt(document.getElementById('s-base').value) || 0);
-  G.cfg.perTaiMoney = Math.max(1, parseInt(document.getElementById('s-tai').value)  || 1);
+  G.cfg.baseMoney   = Math.max(0, parseInt(document.getElementById('s-base').value)   || 0);
+  G.cfg.perTaiMoney = Math.max(1, parseInt(document.getElementById('s-tai').value)    || 1);
+  G.cfg.budget      = Math.max(0, parseInt(document.getElementById('s-budget').value) || 0);
   G.players = names.map(name => ({ name, score: 0 }));
   G.rounds       = [];
   G.banker       = 0;
@@ -857,7 +921,8 @@ function renderGame() {
       ? (G.bankerStreak > 0 ? `莊×${G.bankerStreak+1}` : '莊')
       : '';
     const valCls = p.score>0?'net-pos':p.score<0?'net-neg':'net-zero';
-    const valStr = p.score>0?`+${p.score}`:p.score<0?`${p.score}`:'0';
+    const valStr = p.score>0?`+$${p.score}`:p.score<0?`-$${Math.abs(p.score)}`:'$0';
+    const remain = G.cfg.budget > 0 ? G.cfg.budget + p.score : null;
     return `
       <div class="score-card">
         <div class="score-card-header">
@@ -866,7 +931,7 @@ function renderGame() {
         </div>
         <div class="score-card-name">${colorDot(i)}${p.name}</div>
         <div class="score-card-value ${valCls}">${valStr}</div>
-        <div class="score-card-net">元</div>
+        <div class="score-card-net ${remain!==null?(remain<=0?'net-neg':'net-zero'):''}">${remain!==null?`剩 $${remain}`:'&nbsp;'}</div>
       </div>`;
   }).join('');
 }
@@ -950,13 +1015,15 @@ function renderPreview() {
   }
   const chg = calcChanges(m);
   const payment = G.cfg.baseMoney + m.tai * G.cfg.perTaiMoney;
-  const payNote = `底台 ${G.cfg.baseMoney} + ${m.tai}台×${G.cfg.perTaiMoney} = ${payment} 元/份`;
+  const payNote = G.cfg.baseMoney > 0
+    ? `底台$${G.cfg.baseMoney} + ${m.tai}台×$${G.cfg.perTaiMoney} = $${payment}/份`
+    : `${m.tai}台 × $${G.cfg.perTaiMoney} = $${payment}/份`;
   document.getElementById('preview').innerHTML =
     `<div class="preview-title" style="margin-bottom:8px">${payNote}</div>` +
     G.players.map((p,i) => {
       const c = chg[i];
       const cls = c>0?'chg-gain':c<0?'chg-lose':'chg-none';
-      const str = c>0?`+$${c}`:c===0?'不變':`-$${Math.abs(c)}`;
+      const str = c===0 ? '不變' : `${c>0?'+':''}$${c}`;
       return `<div class="preview-row">
         <span class="preview-name">${colorDot(i)}${p.name}</span>
         <span class="preview-chg ${cls}">${str}</span>
@@ -1032,7 +1099,7 @@ function renderHistory() {
           <span class="hist-badge ${isZimo?'badge-zimo':'badge-fang'}">${isZimo?'自摸':'放槍'}</span>
         </div>
         <div class="hist-winner">${colorDot(r.winner)}${wName}${shooterNote}</div>
-        <div class="hist-meta">${r.payment} 元/份 · ${r.tai} 台 · ${bankerNote}</div>
+        <div class="hist-meta">$${r.payment}/份 · ${r.tai}台 · ${bankerNote}</div>
         <div class="hist-chips">${chips}</div>
       </div>`;
   }).join('');
@@ -1046,13 +1113,15 @@ function renderSettlement() {
     .sort((a,b) => b.net - a.net);
 
   document.getElementById('sett-scores').innerHTML = sorted.map(p => {
-    const cls = p.net>0?'pos':p.net<0?'neg':'zero';
-    const str = p.net>0?`+$${p.net}`:p.net<0?`-$${Math.abs(p.net)}`:'$0';
+    const cls    = p.net>0?'pos':p.net<0?'neg':'zero';
+    const netStr = p.net>0?`+$${p.net}`:p.net<0?`-$${Math.abs(p.net)}`:'$0';
+    const remain = G.cfg.budget > 0 ? `剩 $${G.cfg.budget + p.net}` : '';
     return `
       <div class="sett-row">
         <div class="sett-name">${colorDot(p.idx)}${p.name}</div>
         <div class="sett-right">
-          <div class="sett-pts ${cls}">${str}</div>
+          <div class="sett-pts ${cls}">${netStr}</div>
+          ${remain ? `<div class="sett-money-label">${remain}</div>` : ''}
         </div>
       </div>`;
   }).join('');
