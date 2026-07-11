@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>麻將計分</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,13 +25,29 @@
       font-family: -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
       background: var(--bg);
       min-height: 100vh;
+      min-height: 100dvh;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
+      /* safe area for notch/Dynamic Island */
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
     }
 
     /* ===== VIEWS ===== */
-    .view { display: none; padding: 16px; min-height: 100vh; padding-bottom: 40px; }
+    .view {
+      display: none;
+      padding: clamp(12px, 4vw, 20px);
+      padding-bottom: max(40px, env(safe-area-inset-bottom));
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
     .view.active { display: block; }
+
+    /* 平板以上：置中並限制最大寬度 */
+    @media (min-width: 600px) {
+      .view { max-width: 480px; margin: 0 auto; }
+    }
 
     /* ===== SHARED ===== */
     .card {
@@ -99,8 +115,8 @@
 
     .btn-record {
       width: 100%;
-      padding: 20px;
-      font-size: 1.4rem;
+      padding: clamp(15px, 4vw, 20px);
+      font-size: clamp(1.15rem, 4vw, 1.4rem);
       font-weight: 700;
       color: white;
       background: linear-gradient(135deg, var(--red), #e8405a);
@@ -158,10 +174,10 @@
     /* ===== SETUP ===== */
     .setup-header {
       text-align: center;
-      padding: 36px 0 28px;
+      padding: clamp(20px, 6vw, 36px) 0 clamp(16px, 4vw, 28px);
     }
     .setup-header h1 {
-      font-size: 2.4rem;
+      font-size: clamp(1.8rem, 7vw, 2.4rem);
       font-weight: 800;
       color: var(--gold);
       letter-spacing: 6px;
@@ -252,51 +268,62 @@
     .score-card {
       background: white;
       border-radius: 14px;
-      padding: 14px 14px 16px;
+      padding: 10px 12px 14px;
       text-align: center;
-      position: relative;
+    }
+    .score-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      min-height: 22px;
     }
     .dir-badge {
-      position: absolute;
-      top: 10px;
-      left: 12px;
-      font-size: 1.1rem;
+      font-size: clamp(0.95rem, 3vw, 1.1rem);
       font-weight: 900;
       color: var(--gold);
       line-height: 1;
     }
     .banker-badge {
-      position: absolute;
-      top: 8px;
-      right: 10px;
       background: var(--red);
       color: white;
-      font-size: 0.7rem;
+      font-size: clamp(0.62rem, 1.8vw, 0.7rem);
       font-weight: 800;
       padding: 2px 7px;
       border-radius: 20px;
       letter-spacing: 0.5px;
       line-height: 1.6;
+      white-space: nowrap;
     }
     .score-card-name {
-      font-size: 1rem;
+      font-size: clamp(0.85rem, 2.6vw, 1rem);
       font-weight: 700;
       color: var(--text);
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .score-card-value {
-      font-size: 2.4rem;
+      font-size: clamp(1.8rem, 5.5vw, 2.4rem);
       font-weight: 800;
       line-height: 1;
       color: var(--text);
     }
     .score-card-net {
-      font-size: 0.85rem;
+      font-size: clamp(0.75rem, 2.2vw, 0.85rem);
       font-weight: 600;
-      margin-top: 6px;
+      margin-top: 5px;
+    }
+
+    /* 橫向模式：4 欄一排 */
+    @media (orientation: landscape) and (max-height: 560px) {
+      .scoreboard { grid-template-columns: repeat(4, 1fr); }
+      .score-card-value { font-size: clamp(1.4rem, 3.5vw, 1.9rem); }
+      .game-topbar { padding: 8px 4px 10px; }
+      .game-actions { gap: 7px; }
+      .btn-record { padding: 14px; font-size: 1.1rem; }
+      .btn-ghost { padding: 10px; font-size: 0.9rem; }
     }
     .net-pos { color: var(--red); }
     .net-neg { color: var(--blue); }
@@ -324,9 +351,14 @@
       width: 100%;
       background: #f5f5f7;
       border-radius: 24px 24px 0 0;
-      padding: 12px 20px 48px;
-      max-height: 92vh;
+      padding: 12px clamp(16px, 5vw, 24px) max(48px, env(safe-area-inset-bottom));
+      max-height: 92dvh;
       overflow-y: auto;
+    }
+
+    @media (min-width: 600px) {
+      .overlay { justify-content: center; align-items: flex-end; }
+      .sheet { max-width: 480px; border-radius: 24px; margin-bottom: 24px; }
     }
     .sheet-handle {
       width: 36px;
@@ -394,10 +426,10 @@
     }
     .tai-adj:active { background: #f0f0f0; }
     .tai-num {
-      font-size: 3.2rem;
+      font-size: clamp(2.4rem, 10vw, 3.2rem);
       font-weight: 800;
       color: var(--text);
-      min-width: 64px;
+      min-width: 60px;
       text-align: center;
       line-height: 1;
     }
@@ -753,12 +785,14 @@ function renderGame() {
     const netStr = net>0?`+${net}`:net<0?`${net}`:'±0';
     const isBanker = i === G.banker;
     const bankerLabel = isBanker
-      ? (G.bankerStreak > 0 ? `莊 ×${G.bankerStreak+1}` : '莊')
+      ? (G.bankerStreak > 0 ? `莊×${G.bankerStreak+1}` : '莊')
       : '';
     return `
       <div class="score-card">
-        <div class="dir-badge">${DIRS[i]}</div>
-        ${isBanker ? `<div class="banker-badge">${bankerLabel}</div>` : ''}
+        <div class="score-card-header">
+          <span class="dir-badge">${DIRS[i]}</span>
+          ${isBanker ? `<span class="banker-badge">${bankerLabel}</span>` : '<span></span>'}
+        </div>
         <div class="score-card-name">${colorDot(i)}${p.name}</div>
         <div class="score-card-value">${p.score}</div>
         <div class="score-card-net ${netCls}">${netStr} 點</div>
