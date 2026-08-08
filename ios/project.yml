@@ -20,8 +20,8 @@ targets:
     deploymentTarget: "16.4"
     sources:
       - path: MahjongScore
-    resources:
       - path: ../index.html
+        group: MahjongScore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tw.quilaty.mahjongscore

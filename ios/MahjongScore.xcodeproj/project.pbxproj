@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B9EE37596AD38994004EE41 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = 8C55B894E89597C07D389623 /* index.html */; };
 		3A3905A150CB70D563AFB28A /* MahjongScoreApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D1708C8FA2F98AE8163B4A /* MahjongScoreApp.swift */; };
 		4DCFE01DF3B5D5CB043A9EA4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 82035EBE9C1DA862F357BE90 /* Assets.xcassets */; };
 		7CFE30AC6FA07B5ADF7EB7A1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E05F4B7BC53D05D5390E718A /* ContentView.swift */; };
@@ -15,6 +16,7 @@
 /* Begin PBXFileReference section */
 		2D0DCE7D1E8511C86D68D7A3 /* MahjongScore.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MahjongScore.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		82035EBE9C1DA862F357BE90 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8C55B894E89597C07D389623 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = index.html; path = ../../index.html; sourceTree = "<group>"; };
 		B2D1708C8FA2F98AE8163B4A /* MahjongScoreApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MahjongScoreApp.swift; sourceTree = "<group>"; };
 		E05F4B7BC53D05D5390E718A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -41,6 +43,7 @@
 			children = (
 				82035EBE9C1DA862F357BE90 /* Assets.xcassets */,
 				E05F4B7BC53D05D5390E718A /* ContentView.swift */,
+				8C55B894E89597C07D389623 /* index.html */,
 				B2D1708C8FA2F98AE8163B4A /* MahjongScoreApp.swift */,
 			);
 			path = MahjongScore;
@@ -103,6 +106,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4DCFE01DF3B5D5CB043A9EA4 /* Assets.xcassets in Resources */,
+				0B9EE37596AD38994004EE41 /* index.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
