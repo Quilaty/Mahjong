@@ -605,6 +605,28 @@ let G = {
   windRound: 0       // 場風（0=東風 1=南風 2=西風 3=北風）
 };
 
+// ===== PERSISTENCE =====
+const STORAGE_KEY = 'mahjong-score-state-v1';
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(G)); } catch (e) {}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!saved || !Array.isArray(saved.players) || !saved.players.length) return false;
+    G = saved;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+function clearState() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+
 // ===== VIEW =====
 function show(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -640,6 +662,7 @@ function startGame() {
   G.banker       = 0;
   G.bankerStreak = 0;
   G.windRound    = 0;
+  saveState();
   showGame();
 }
 
@@ -811,6 +834,7 @@ function confirmRound() {
     windRound : prevWindRound
   });
 
+  saveState();
   closeModal();
   renderGame();
 }
@@ -911,6 +935,8 @@ function editLastRound() {
   // 移除上一局紀錄
   G.rounds.pop();
 
+  saveState();
+
   // 帶入舊資料開啟 modal
   G.modal = { winner: last.winner, tai: last.tai, method: last.method, shooter: last.shooter };
   document.getElementById('sheet-title').textContent = currentJu();
@@ -980,8 +1006,12 @@ function exportCSV() {
 // ===== NEW GAME =====
 function confirmNewGame() {
   if (G.rounds.length > 0 && !confirm('確定要重新開局嗎？本局記錄將會清除。')) return;
+  clearState();
   show('v-setup');
 }
+
+// ===== INIT =====
+if (loadState()) showGame();
 </script>
 </body>
 </html>
