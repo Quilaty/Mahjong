@@ -705,6 +705,11 @@ function startGame() {
 }
 
 // ===== GAME RENDER =====
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
 function colorDot(i) {
   return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLORS[i]};margin-right:6px;vertical-align:middle"></span>`;
 }
@@ -730,7 +735,7 @@ function renderGame() {
           <span class="dir-badge">${DIRS[i]}</span>
           ${isBanker ? `<span class="banker-badge">${bankerLabel}</span>` : '<span></span>'}
         </div>
-        <div class="score-card-name">${colorDot(i)}${p.name}</div>
+        <div class="score-card-name">${colorDot(i)}${escHtml(p.name)}</div>
         <div class="score-card-value ${valCls}">${valStr}</div>
         <div class="score-card-net ${remain!==null?(remain<G.cfg.budget?'net-neg':remain>G.cfg.budget?'net-pos':'net-zero'):''}">${remain!==null?`剩 $${remain}`:'&nbsp;'}</div>
       </div>`;
@@ -782,7 +787,7 @@ function renderModal() {
   // Winner grid
   document.getElementById('winner-grid').innerHTML = G.players.map((p,i) =>
     `<button class="sel-btn ${m.winner===i?'sel-red':''}" onclick="pickWinner(${i})">
-      <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${p.name}${i===G.banker?' <span style="background:var(--red);color:white;font-size:0.65rem;padding:1px 5px;border-radius:10px;font-weight:800;vertical-align:middle">莊</span>':''}
+      <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${escHtml(p.name)}${i===G.banker?' <span style="background:var(--red);color:white;font-size:0.65rem;padding:1px 5px;border-radius:10px;font-weight:800;vertical-align:middle">莊</span>':''}
     </button>`
   ).join('');
 
@@ -800,7 +805,7 @@ function renderModal() {
       const disabled = m.winner === i ? 'disabled' : '';
       const sel = m.shooter === i ? 'sel-blue' : '';
       return `<button class="sel-btn ${sel}" ${disabled} onclick="pickShooter(${i})">
-        <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${p.name}${i===G.banker?' <span style="background:var(--red);color:white;font-size:0.65rem;padding:1px 5px;border-radius:10px;font-weight:800;vertical-align:middle">莊</span>':''}
+        <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${escHtml(p.name)}${i===G.banker?' <span style="background:var(--red);color:white;font-size:0.65rem;padding:1px 5px;border-radius:10px;font-weight:800;vertical-align:middle">莊</span>':''}
       </button>`;
     }).join('');
   } else {
@@ -851,7 +856,7 @@ function renderPreview() {
       const cls = c>0?'chg-gain':c<0?'chg-lose':'chg-none';
       const str = c===0 ? '不變' : `${c>0?'+':''}$${c}`;
       return `<div class="preview-row">
-        <span class="preview-name">${colorDot(i)}${p.name}</span>
+        <span class="preview-name">${colorDot(i)}${escHtml(p.name)}</span>
         <span class="preview-chg ${cls}">${str}</span>
       </div>`;
     }).join('');
@@ -906,7 +911,7 @@ function openBankerModal() {
   document.getElementById('banker-grid').innerHTML = G.players.map((p,i) => {
     const sel = i === G.banker ? 'sel-red' : '';
     return `<button class="sel-btn ${sel}" onclick="setBanker(${i})">
-      <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${p.name}
+      <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${escHtml(p.name)}
     </button>`;
   }).join('');
   document.getElementById('banker-overlay').classList.add('active');
@@ -935,16 +940,16 @@ function renderHistory() {
     return;
   }
   el.innerHTML = [...G.rounds].reverse().map(r => {
-    const wName = G.players[r.winner].name;
+    const wName = escHtml(G.players[r.winner].name);
     const isZimo = r.method === 'zimo';
-    const shooterNote = isZimo ? '' : `（${G.players[r.shooter].name} 放槍）`;
-    const bankerName = G.players[r.banker].name;
+    const shooterNote = isZimo ? '' : `（${escHtml(G.players[r.shooter].name)} 放槍）`;
+    const bankerName = escHtml(G.players[r.banker].name);
     const bankerNote = r.streak > 0 ? `${DIRS[r.banker]} ${bankerName} 連莊×${r.streak+1}` : `${DIRS[r.banker]} ${bankerName} 坐莊`;
     const chips = G.players.map((p,i) => {
       const c = r.changes[i];
       const cls = c>0?'hchip-gain':c<0?'hchip-lose':'hchip-none';
       const str = c>0?`+${c}`:c===0?'—':`${c}`;
-      return `<span class="hchip ${cls}">${p.name} ${str}</span>`;
+      return `<span class="hchip ${cls}">${escHtml(p.name)} ${str}</span>`;
     }).join('');
     return `
       <div class="history-item">
@@ -972,7 +977,7 @@ function renderSettlement() {
     const remain = G.cfg.budget > 0 ? `剩 $${G.cfg.budget + p.net}` : '';
     return `
       <div class="sett-row">
-        <div class="sett-name">${colorDot(p.idx)}${p.name}</div>
+        <div class="sett-name">${colorDot(p.idx)}${escHtml(p.name)}</div>
         <div class="sett-right">
           <div class="sett-pts ${cls}">${netStr}</div>
           ${remain ? `<div class="sett-money-label">${remain}</div>` : ''}
@@ -983,7 +988,7 @@ function renderSettlement() {
   document.getElementById('sett-money-card').style.display = 'block';
   const debts = computeDebts();
   document.getElementById('sett-debts').innerHTML = debts.length
-    ? debts.map(d => `<div class="debt-row">${d.from} 付給 ${d.to} <span class="debt-amount">$${d.amount}</span></div>`).join('')
+    ? debts.map(d => `<div class="debt-row">${escHtml(d.from)} 付給 ${escHtml(d.to)} <span class="debt-amount">$${d.amount}</span></div>`).join('')
     : '<div style="color:#999;font-size:0.95rem;padding:8px 0">大家打平！</div>';
 }
 
