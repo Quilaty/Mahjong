@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# 訓練產出與資料集不進版控（太大），各自保留 .gitkeep 佔位
+datasets/*
+!datasets/.gitkeep
+weights/*
+!weights/.gitkeep
+runs/
+.ipynb_checkpoints/
