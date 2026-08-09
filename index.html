@@ -507,9 +507,25 @@
       <button class="btn-ghost" onclick="showSettlement()">結算</button>
     </div>
     <div class="btn-row">
+      <button class="btn-ghost" onclick="openBankerModal()">指定莊家</button>
+    </div>
+    <div class="btn-row">
       <button class="btn-ghost" id="btn-edit-last" onclick="editLastRound()" style="display:none">修改上一局</button>
       <button class="btn-ghost danger" onclick="confirmNewGame()">重新開局</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ BANKER MODAL ============ -->
+<div class="overlay" id="banker-overlay" onclick="handleBankerOverlayClick(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">指定莊家</div>
+
+    <div class="section-label">選擇本局莊家</div>
+    <div class="select-grid" id="banker-grid"></div>
+
+    <button class="btn-cancel" onclick="closeBankerModal()">取消</button>
   </div>
 </div>
 
@@ -837,6 +853,32 @@ function confirmRound() {
   saveState();
   closeModal();
   renderGame();
+}
+
+// ===== MANUAL BANKER =====
+function openBankerModal() {
+  document.getElementById('banker-grid').innerHTML = G.players.map((p,i) => {
+    const sel = i === G.banker ? 'sel-red' : '';
+    return `<button class="sel-btn ${sel}" onclick="setBanker(${i})">
+      <span style="font-size:0.75rem;font-weight:900;color:var(--gold);margin-right:4px">${DIRS[i]}</span>${colorDot(i)}${p.name}
+    </button>`;
+  }).join('');
+  document.getElementById('banker-overlay').classList.add('active');
+}
+function closeBankerModal() {
+  document.getElementById('banker-overlay').classList.remove('active');
+}
+function handleBankerOverlayClick(e) {
+  if (e.target === document.getElementById('banker-overlay')) closeBankerModal();
+}
+function setBanker(i) {
+  if (i !== G.banker) {
+    G.banker = i;
+    G.bankerStreak = 0;
+    saveState();
+    renderGame();
+  }
+  closeBankerModal();
 }
 
 // ===== HISTORY =====
