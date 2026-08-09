@@ -362,6 +362,17 @@
       background: var(--surface2); border-radius: 14px;
       border: 1px solid var(--border); padding: 16px; margin-bottom: 20px;
     }
+
+    .photo-box { margin-bottom: 22px; }
+    .photo-preview-wrap { margin-top: 12px; }
+    .photo-preview-wrap img {
+      width: 100%; display: block; border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    .photo-hint {
+      font-size: 0.76rem; color: var(--text2); text-align: center;
+      margin: 10px 0 6px;
+    }
     .preview-title {
       font-size: 0.8rem; color: var(--gold); font-weight: 700;
       text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
@@ -535,6 +546,17 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="sheet-title">記錄本局</div>
 
+    <div class="photo-box">
+      <div class="section-label">拍照輔助（Beta）</div>
+      <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="handlePhotoSelect(event)">
+      <button class="btn-ghost" type="button" onclick="document.getElementById('photo-input').click()">📷 拍攝牌面</button>
+      <div class="photo-preview-wrap" id="photo-preview-wrap" style="display:none">
+        <img id="photo-preview" alt="牌面照片預覽">
+        <div class="photo-hint">自動辨識台數開發中，請依照片手動選擇下方項目</div>
+        <button class="btn-ghost" type="button" onclick="clearPhoto()">移除照片</button>
+      </div>
+    </div>
+
     <div class="section-label">誰贏了？</div>
     <div class="select-grid" id="winner-grid"></div>
 
@@ -615,7 +637,7 @@ let G = {
   players: [],       // [{name, score}]
   rounds: [],        // [{roundNum,winner,tai,method,shooter,changes,time,banker}]
   cfg: { baseMoney:50, perTaiMoney:20, budget:1000 },
-  modal: { winner:null, tai:1, method:null, shooter:null },
+  modal: { winner:null, tai:1, method:null, shooter:null, photo:null },
   banker: 0,         // 目前莊家 index（0=東 1=南 2=西 3=北）
   bankerStreak: 0,   // 連莊次數（0 = 第一莊）
   windRound: 0       // 場風（0=東風 1=南風 2=西風 3=北風）
@@ -718,10 +740,32 @@ function renderGame() {
 
 // ===== MODAL =====
 function openModal() {
-  G.modal = { winner:null, tai:1, method:null, shooter:null };
+  G.modal = { winner:null, tai:1, method:null, shooter:null, photo:null };
+  document.getElementById('photo-input').value = '';
   document.getElementById('sheet-title').textContent = currentJu();
   renderModal();
   document.getElementById('overlay').classList.add('active');
+}
+
+function handlePhotoSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    G.modal.photo = reader.result;
+    renderModalPhoto();
+  };
+  reader.readAsDataURL(file);
+}
+function clearPhoto() {
+  G.modal.photo = null;
+  document.getElementById('photo-input').value = '';
+  renderModalPhoto();
+}
+function renderModalPhoto() {
+  const has = !!G.modal.photo;
+  document.getElementById('photo-preview-wrap').style.display = has ? 'block' : 'none';
+  document.getElementById('photo-preview').src = has ? G.modal.photo : '';
 }
 function closeModal() {
   document.getElementById('overlay').classList.remove('active');
@@ -732,6 +776,8 @@ function handleOverlayClick(e) {
 
 function renderModal() {
   const m = G.modal;
+
+  renderModalPhoto();
 
   // Winner grid
   document.getElementById('winner-grid').innerHTML = G.players.map((p,i) =>
@@ -980,7 +1026,8 @@ function editLastRound() {
   saveState();
 
   // 帶入舊資料開啟 modal
-  G.modal = { winner: last.winner, tai: last.tai, method: last.method, shooter: last.shooter };
+  G.modal = { winner: last.winner, tai: last.tai, method: last.method, shooter: last.shooter, photo: null };
+  document.getElementById('photo-input').value = '';
   document.getElementById('sheet-title').textContent = currentJu();
   renderModal();
   document.getElementById('overlay').classList.add('active');
