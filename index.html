@@ -546,6 +546,20 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="sheet-title">記錄本局</div>
 
+    <div class="section-label">誰贏了？</div>
+    <div class="select-grid" id="winner-grid"></div>
+
+    <div class="section-label">胡法</div>
+    <div class="method-row">
+      <button class="method-btn" id="m-zimo" onclick="pickMethod('zimo')">自摸</button>
+      <button class="method-btn" id="m-fang" onclick="pickMethod('fangchang')">放槍</button>
+    </div>
+
+    <div id="shooter-wrap" style="display:none">
+      <div class="section-label">誰放槍？</div>
+      <div class="select-grid" id="shooter-grid"></div>
+    </div>
+
     <div class="photo-box">
       <div class="section-label">拍照輔助（Beta）</div>
       <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="handlePhotoSelect(event)">
@@ -557,9 +571,6 @@
       </div>
     </div>
 
-    <div class="section-label">誰贏了？</div>
-    <div class="select-grid" id="winner-grid"></div>
-
     <div class="section-label">幾台？</div>
     <div class="tai-row">
       <button class="tai-adj" onclick="changeTai(-1)">−</button>
@@ -568,17 +579,6 @@
         <div class="tai-unit">台</div>
       </div>
       <button class="tai-adj" onclick="changeTai(+1)">+</button>
-    </div>
-
-    <div class="section-label">胡法</div>
-    <div class="method-row">
-      <button class="method-btn" id="m-zimo" onclick="pickMethod('zimo')">自摸</button>
-      <button class="method-btn" id="m-fang" onclick="pickMethod('fangchang')">放槍</button>
-    </div>
-
-    <div id="shooter-wrap" style="display:none">
-      <div class="section-label">誰放槍？</div>
-      <div class="select-grid" id="shooter-grid"></div>
     </div>
 
     <div class="preview-box">
